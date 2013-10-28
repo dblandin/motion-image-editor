@@ -30,25 +30,24 @@ class Motion; class ImageEditorView < UIView
   end
 
   def crop_rect=(rect)
-    unless CGRectEqualToRect(crop_rect, rect)
-      @crop_rect = CGRectOffset(rect, frame.origin.x, frame.origin.y)
+    @crop_rect = CGRectOffset(rect, frame.origin.x, frame.origin.y)
 
-      UIGraphicsBeginImageContextWithOptions(bounds.size, false, 0.0)
-      context = UIGraphicsGetCurrentContext()
+    UIGraphicsBeginImageContextWithOptions(bounds.size, false, 0.0)
 
-      UIColor.blackColor.setFill
-      UIRectFill(bounds)
+    context = UIGraphicsGetCurrentContext()
 
-      CGContextSetStrokeColorWithColor(context, UIColor.whiteColor.colorWithAlphaComponent(0.5).CGColor)
-      CGContextStrokeRect(context, crop_rect)
+    UIColor.blackColor.setFill
+    UIRectFill(bounds)
 
-      UIColor.clearColor.setFill
-      UIRectFill(CGRectInset(crop_rect, 1, 1))
+    CGContextSetStrokeColorWithColor(context, UIColor.whiteColor.colorWithAlphaComponent(0.5).CGColor)
+    CGContextStrokeRect(context, rect)
 
-      image_view.image = UIGraphicsGetImageFromCurrentImageContext()
+    UIColor.clearColor.setFill
+    UIRectFill(CGRectInset(rect, 1, 1))
 
-      UIGraphicsEndImageContext()
-    end
+    image_view.image = UIGraphicsGetImageFromCurrentImageContext()
+
+    UIGraphicsEndImageContext()
   end
 
   def image_view

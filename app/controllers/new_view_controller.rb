@@ -1,134 +1,18 @@
-class Motion; class ImageEditorController < UIViewController
-  attr_reader :touch_center, :scale_center, :scale, :output_width, :source_image, :crop_rect
+class NewViewController < UIViewController
+  CROP_RECT = [[10, 100], [300, 300 * 0.75]]
+
+  attr_reader :touch_center, :scale_center, :scale
 
   def viewDidLoad
     super
 
     add_subviews
 
+    reset
+
     add_gesture_recognizers
 
     setup_constraints
-  end
-
-  def process_image
-    view.userInteractionEnabled = false
-
-    start_transform_callback.call
-
-    # Async
-    result_ref = old_transform_image(
-      image_view.transform,
-      source_image:       source_image.CGImage,
-      source_size:        source_image.size,
-      source_orientation: source_image.imageOrientation,
-      output_width:       output_width || source_image.size.width,
-      crop_rect:          crop_rect,
-      image_view_size:    image_view.bounds.size)
-
-    # Main
-
-    transformed_image = UIImage.imageWithCGImage(
-      result_ref,
-      scale: 1.0,
-      orientation: UIImageOrientationUp)
-
-    CGImageRelease(result_ref)
-
-    view.userInteractionEnabled = true
-
-    done_callback.call(transformed_image)
-
-    end_transform_callback.call
-  end
-
-  def crop_rect=(rect)
-    @crop_rect = rect
-
-    crop_view.crop_rect = rect
-  end
-
-  def transform_image(transform, source_image: source_image, source_size: source_size, source_orientation: source_orientation, output_width: output_width, crop_rect: crop_rect, image_view_size: image_view_size)
-
-    aspect = crop_rect.size.height / crop_rect.size.width
-    output_size = CGSizeMake(output_width, output_width * aspect)
-
-    context = CGBitmapContextCreate(
-      nil,                                      # data
-      output_size.width,                        # width
-      output_size.height,                       # height
-      CGImageGetBitsPerComponent(source_image), # bits per component
-      0,                                        # bytes per row
-      CGImageGetColorSpace(source_image),       # color space
-      CGImageGetBitmapInfo(source_image))       # bitmap info
-
-    transform = CGAffineTransformIdentity
-    transform = CGAffineTransformTranslate(transform, crop_rect.size.width / 2, crop_rect.size.height / 2)
-    transform = CGAffineTransformScale(transform, 1.0, -1.0)
-
-    CGContextConcatCTM(context, transform)
-
-    CGContextDrawImage(context, CGRectMake(image_view_size.width / 2, -source_image.size.height/2, source_image.size.width, source_image.size.height), source_iamge.CGImage)
-
-    rotated_image = UIImage.imageWithCGImage(CGBitmapContextCreateImage(context))
-  end
-
-  def old_transform_image(transform, source_image: source_image, source_size: source_size, source_orientation: source_orientation, output_width: output_width, crop_rect: crop_rect, image_view_size: image_view_size)
-    aspect = crop_rect.size.height / crop_rect.size.width
-    output_size = CGSizeMake(output_width, output_width * aspect)
-
-    context = CGBitmapContextCreate(
-      nil,                                      # data
-      output_size.width,                        # width
-      output_size.height,                       # height
-      CGImageGetBitsPerComponent(source_image), # bits per component
-      0,                                        # bytes per row
-      CGImageGetColorSpace(source_image),       # color space
-      CGImageGetBitmapInfo(source_image))       # bitmap info
-
-    CGContextSetFillColorWithColor(context,  UIColor.clearColor.CGColor)
-    CGContextFillRect(context, CGRectMake(0, 0, output_size.width, output_size.height))
-
-    ui_coords = CGAffineTransformMakeScale(output_size.width / crop_rect.size.width,
-                                           output_size.height / crop_rect.size.height)
-
-    ui_coords = CGAffineTransformTranslate(ui_coords, crop_rect.size.width / 2.0,
-                                           crop_rect.size.height / 2.0)
-
-    ui_coords = CGAffineTransformScale(ui_coords, 1.0, -1.0)
-    CGContextConcatCTM(context, ui_coords)
-
-    CGContextConcatCTM(context, transform)
-    CGContextScaleCTM(context, 1.0, -1.0)
-    #CGContextConcatCTM(context, orientationTransform)
-
-    drawing_rect = CGRectMake(-image_view_size.width / 2.0, -image_view_size.height / 2.0, image_view_size.width, image_view_size.height)
-
-    CGContextDrawImage(context, drawing_rect, source_image)
-
-    CGBitmapContextCreateImage(context)
-  end
-
-  def done_callback
-    @done_callback ||= -> (image) { }
-  end
-
-  def cancel_callback
-    @cancel_callback ||= -> { }
-  end
-
-  def start_transform_callback
-    @start_transform_callback ||= -> { }
-  end
-
-  def end_transform_callback
-    @end_transform_callback ||= -> { }
-  end
-
-  def viewDidAppear(animated)
-    super
-
-    reset
   end
 
   def add_subviews
@@ -141,6 +25,12 @@ class Motion; class ImageEditorController < UIViewController
     crop_view.addGestureRecognizer(pinch_recognizer)
     crop_view.addGestureRecognizer(rotation_recognizer)
     crop_view.addGestureRecognizer(tap_recognizer)
+  end
+
+  def viewDidAppear(animted)
+    super
+
+    crop_view.crop_rect = CROP_RECT
   end
 
   def reset
@@ -225,6 +115,7 @@ class Motion; class ImageEditorController < UIViewController
   end
 
   def handle_tap(recognizer)
+
     reset
   end
 
@@ -256,7 +147,7 @@ class Motion; class ImageEditorController < UIViewController
   end
 
   def source_image=(image)
-    @source_image = image
+    @source_iamge = image
 
     image_view.image = image
   end
@@ -290,4 +181,4 @@ class Motion; class ImageEditorController < UIViewController
   def prefersStatusBarHidden
     true
   end
-end; end
+end
