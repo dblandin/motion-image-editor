@@ -1,34 +1,30 @@
 class ViewController < Motion::ImageEditorController
   CROP_RECT = CGRectMake(10, 100, 300, 300 * 0.75)
 
+  def viewDidAppear(animated)
+    self.crop_rect = CROP_RECT
+
+    super
+  end
+
   def viewDidLoad
     super
 
-    self.navigationItem.rightBarButtonItem = UIBarButtonItem.alloc.initWithBarButtonSystemItem(
+    view.backgroundColor = UIColor.whiteColor
+
+    navigationItem.rightBarButtonItem = UIBarButtonItem.alloc.initWithBarButtonSystemItem(
       UIBarButtonSystemItemSave,
       target: self,
-      action: 'process_image')
+      action: 'process_image:')
   end
 
-  def viewDidAppear(animated)
-    super
-
-    self.crop_rect = CROP_RECT
-  end
-
-  def done_callback
-    -> (image) do
-      p 'received image', image
-
+  def process_image(sender)
+    process do |image|
       result_controller       = ResultController.alloc.init
       result_controller.image = image
 
       navigationController.pushViewController(result_controller, animated: true)
     end
-  end
-
-  def cancel_callback
-    -> { p 'cancelled' }
   end
 
   def prefersStatusBarHidden

@@ -1,9 +1,7 @@
 # -*- encoding: utf-8 -*-
-VERSION = "1.0"
-
 Gem::Specification.new do |spec|
   spec.name          = "motion-image-editor"
-  spec.version       = VERSION
+  spec.version       = '0.0.1'
   spec.authors       = ["Devon Blandin"]
   spec.email         = ["dblandin@gmail.com"]
   spec.description   = %q{TODO: Write a gem description}

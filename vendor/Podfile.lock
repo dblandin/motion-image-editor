@@ -1,0 +1,10 @@
+PODS:
+  - UIImage-Resize (1.0.1)
+
+DEPENDENCIES:
+  - UIImage-Resize (~> 1.0.1)
+
+SPEC CHECKSUMS:
+  UIImage-Resize: 575381c9746383a5f557bc584a538a2d2ff53c76
+
+COCOAPODS: 0.26.2

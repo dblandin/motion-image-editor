@@ -1,17 +1,25 @@
-.repl_history
+# Build
 build
-tags
-app/pixate_code.rb
+bin/
+.dat*
+*.bridgesupport
+build-iPhoneSimulator
+build-iPhoneOS
+
+# Xcode
 resources/*.nib
 resources/*.momd
 resources/*.storyboardc
+*.xcuserstate
+
+# Rubygems
+vendor/ruby
+vendor/Pods
+.bundle
+
+# OSX
 .DS_Store
-nbproject
-.redcar
-#*#
-*~
-*.sw[po]
-*.gem
-.eprj
-.sass-cache
-.idea
+
+# Development
+.repl_history
+tags
