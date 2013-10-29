@@ -1,6 +1,7 @@
 class Motion; class ImageEditorController < UIViewController
-  MINIMUM_SCALE = 1
-  MAXIMUM_SCALE = 3
+  ANIMATION_DURATION = 0.2
+  MINIMUM_SCALE      = 1
+  MAXIMUM_SCALE      = 3
 
   attr_reader :touch_center,
               :scale_center,
@@ -180,7 +181,7 @@ class Motion; class ImageEditorController < UIViewController
     if animated
       view.userInteractionEnabled = false
 
-      UIView.animateWithDuration(1.0, animations: reset_block, completion: -> (finished) {
+      UIView.animateWithDuration(ANIMATION_DURATION, animations: reset_block, completion: -> (finished) {
           view.userInteractionEnabled = true
       })
     else
@@ -236,7 +237,7 @@ class Motion; class ImageEditorController < UIViewController
       view.userInteractionEnabled = false
 
       UIView.animateWithDuration(
-        0.2,
+        ANIMATION_DURATION,
         delay: 0,
         options: UIViewAnimationOptionCurveEaseOut,
         animations: -> { image_view.transform = transform },

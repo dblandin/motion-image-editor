@@ -39,9 +39,6 @@ class Motion; class ImageEditorView < UIView
     UIColor.blackColor.setFill
     UIRectFill(bounds)
 
-    CGContextSetStrokeColorWithColor(context, UIColor.whiteColor.colorWithAlphaComponent(0.5).CGColor)
-    CGContextStrokeRect(context, rect)
-
     UIColor.clearColor.setFill
     UIRectFill(CGRectInset(rect, 1, 1))
 
