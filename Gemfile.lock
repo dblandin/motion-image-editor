@@ -38,6 +38,5 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  cocoapods
   motion-cocoapods
   rake
