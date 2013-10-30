@@ -4,6 +4,14 @@ class Motion; class ImageEditorController < UIViewController
   MAXIMUM_SCALE      = 3
 
   attr_reader :source_image, :crop_rect, :output_width
+  attr_writer :rotation_enabled, :enforce_bounds
+
+  def initWithNibName(nib, bundle: bundle)
+    super.tap do |controller|
+      controller.rotation_enabled = true
+      controller.enforce_bounds   = false
+    end
+  end
 
   def viewDidLoad
     super
@@ -88,7 +96,7 @@ class Motion; class ImageEditorController < UIViewController
           @scale = new_scale
       })
 
-      check_bounds
+      check_bounds if enforce_bounds?
 
       false
     else
@@ -329,7 +337,7 @@ class Motion; class ImageEditorController < UIViewController
   end
 
   def handle_rotation(recognizer)
-    if handle_gesture_state? recognizer.state
+    if rotation_enabled? && handle_gesture_state?(recognizer.state)
       delta_x = touch_center.x - image_view.bounds.size.width / 2
       delta_y = touch_center.y - image_view.bounds.size.height / 2
 
@@ -417,5 +425,13 @@ class Motion; class ImageEditorController < UIViewController
 
   def prefersStatusBarHidden
     true
+  end
+
+  def rotation_enabled?
+    !!@rotation_enabled
+  end
+
+  def enforce_bounds?
+    !!@enforce_bounds
   end
 end; end

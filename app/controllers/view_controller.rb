@@ -16,6 +16,9 @@ class ViewController < Motion::ImageEditorController
       UIBarButtonSystemItemSave,
       target: self,
       action: 'process_image:')
+
+    self.rotation_enabled = false
+    self.enforce_bounds   = true
   end
 
   def process_image(sender)
