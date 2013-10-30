@@ -3,12 +3,7 @@ class Motion; class ImageEditorController < UIViewController
   MINIMUM_SCALE      = 1
   MAXIMUM_SCALE      = 3
 
-  attr_reader :touch_center,
-              :scale_center,
-              :scale,
-              :output_width,
-              :source_image,
-              :crop_rect
+  attr_reader :source_image, :crop_rect, :output_width
 
   def viewDidLoad
     super
@@ -18,6 +13,14 @@ class Motion; class ImageEditorController < UIViewController
     add_gesture_recognizers
 
     setup_constraints
+  end
+
+  def viewDidAppear(animated)
+    super
+
+    image_view.image = preview_image
+
+    reset
   end
 
   def add_subviews
@@ -46,6 +49,53 @@ class Motion; class ImageEditorController < UIViewController
       views:   { 'crop' => crop_view }))
   end
 
+  def source_image=(image)
+    if image != source_image
+      @source_image  = image
+      @preview_image = nil
+    end
+  end
+
+  def crop_rect=(rect)
+    @crop_rect = rect
+
+    crop_view.crop_rect = rect
+  end
+
+  def handle_gesture_state?(state)
+    case state
+    when UIGestureRecognizerStateEnded || UIGestureRecognizerStateCancelled
+      new_scale = bounded_scale(scale)
+
+      delta_x = scale_center.x - image_view.bounds.size.width / 2.0
+      delta_y = scale_center.y - image_view.bounds.size.height / 2.0
+
+      transform = CGAffineTransformTranslate(image_view.transform, delta_x, delta_y)
+
+      transform = CGAffineTransformScale(transform, new_scale / scale , new_scale / scale)
+
+      transform = CGAffineTransformTranslate(transform, -delta_x, -delta_y)
+
+      view.userInteractionEnabled = false
+
+      UIView.animateWithDuration(
+        ANIMATION_DURATION,
+        delay: 0,
+        options: UIViewAnimationOptionCurveEaseOut,
+        animations: -> { image_view.transform = transform },
+        completion: -> (finished) {
+          view.userInteractionEnabled = true
+          @scale = new_scale
+      })
+
+      check_bounds
+
+      false
+    else
+      true
+    end
+  end
+
   def process(&block)
     view.userInteractionEnabled = false
 
@@ -72,19 +122,6 @@ class Motion; class ImageEditorController < UIViewController
         block.call(transformed_image)
       end
     end
-  end
-
-  def crop_rect=(rect)
-    @crop_rect = rect
-
-    crop_view.crop_rect = rect
-  end
-
-  def scale_reset_orientations
-    [ UIImageOrientationUpMirrored,
-      UIImageOrientationDownMirrored,
-      UIImageOrientationLeftMirrored,
-      UIImageOrientationRightMirrored ]
   end
 
   def transform_image(transform, source_image: source_image, source_size: source_size, source_orientation: source_orientation, output_width: output_width, crop_rect: crop_rect, image_view_size: image_view_size)
@@ -145,14 +182,6 @@ class Motion; class ImageEditorController < UIViewController
     CGBitmapContextCreateImage(context)
   end
 
-  def viewDidAppear(animated)
-    super
-
-    image_view.image = preview_image
-
-    reset
-  end
-
   def reset(options = {})
     animated = options.fetch(:animated, false)
 
@@ -163,8 +192,8 @@ class Motion; class ImageEditorController < UIViewController
     crop_aspect   = crop_rect.size.height    / crop_rect.size.width
 
     if source_aspect > crop_aspect
-        w = crop_rect.size.width
-        h = source_aspect * w
+      w = crop_rect.size.width
+      h = source_aspect * w
     else
       h = crop_rect.size.height
       w = h / source_aspect
@@ -189,7 +218,53 @@ class Motion; class ImageEditorController < UIViewController
     end
   end
 
-  # Touch handling
+  def check_bounds
+    y_offset = 0
+    x_offset = 0
+
+    if image_view.frame.origin.x > crop_rect.origin.x
+      x_offset    = -(image_view.frame.origin.x - crop_rect.origin.x)
+      new_right_x = CGRectGetMaxX(image_view.frame) + x_offset
+
+      if new_right_x < CGRectGetMaxX(crop_rect)
+        x_offset = CGRectGetMaxX(crop_rect) - CGRectGetMaxX(image_view.frame)
+      end
+    elsif CGRectGetMaxX(image_view.frame) < CGRectGetMaxX(crop_rect)
+      x_offset = CGRectGetMaxX(crop_rect) - CGRectGetMaxX(image_view.frame)
+      new_left_x = image_view.frame.origin.x + x_offset
+
+      if new_left_x > crop_rect.origin.x
+        x_offset = crop_rect.origin.x - image_view.frame.origin.x
+      end
+    end
+
+    if image_view.frame.origin.y > crop_rect.origin.y
+      y_offset = -(image_view.frame.origin.y - crop_rect.origin.y)
+      new_bottom_y = CGRectGetMaxY(image_view.frame) + y_offset
+
+      if new_bottom_y < CGRectGetMaxY(crop_rect)
+        y_offset = CGRectGetMaxY(crop_rect) - CGRectGetMaxY(image_view.frame)
+      end
+    elsif CGRectGetMaxY(image_view.frame) < CGRectGetMaxY(crop_rect)
+      y_offset = CGRectGetMaxY(crop_rect) - CGRectGetMaxY(image_view.frame)
+      new_top_y = image_view.frame.origin.y + y_offset
+
+      if new_top_y > crop_rect.origin.y
+        y_offset = crop_rect.origin.y - image_view.frame.origin.y
+      end
+    end
+
+    if x_offset || y_offset
+      view.userInteractionEnabled = false
+      transform = CGAffineTransformTranslate(image_view.transform, x_offset / scale, y_offset / scale)
+      UIView.animateWithDuration(
+        ANIMATION_DURATION,
+        delay:      0,
+        options:    UIViewAnimationOptionCurveEaseOut,
+        animations: -> { image_view.transform = transform },
+        completion: -> (finished) { view.userInteractionEnabled = true })
+    end
+  end
 
   def touchesBegan(touches, withEvent: event)
     handle_touches(event.allTouches)
@@ -221,48 +296,19 @@ class Motion; class ImageEditorController < UIViewController
     end
   end
 
-  def handle_state?(state)
-    if state == UIGestureRecognizerStateEnded
-      new_scale = bounded_scale(scale)
+  def handle_pan(recognizer)
+    if handle_gesture_state? recognizer.state
+      translation = recognizer.translationInView(image_view)
+      transform   = CGAffineTransformTranslate(image_view.transform, translation.x, translation.y)
 
-      delta_x = scale_center.x - image_view.bounds.size.width / 2.0
-      delta_y = scale_center.y - image_view.bounds.size.height / 2.0
+      image_view.transform = transform
 
-      transform = CGAffineTransformTranslate(image_view.transform, delta_x, delta_y)
-
-      transform = CGAffineTransformScale(transform, new_scale / scale , new_scale / scale)
-
-      transform = CGAffineTransformTranslate(transform, -delta_x, -delta_y)
-
-      view.userInteractionEnabled = false
-
-      UIView.animateWithDuration(
-        ANIMATION_DURATION,
-        delay: 0,
-        options: UIViewAnimationOptionCurveEaseOut,
-        animations: -> { image_view.transform = transform },
-        completion: -> (finished) {
-          view.userInteractionEnabled = true
-          @scale = new_scale
-      })
-
-      false
-    else
-      true
+      recognizer.setTranslation(CGPointZero, inView: crop_view)
     end
   end
 
-  def handle_pan(recognizer)
-    translation = recognizer.translationInView(image_view)
-    transform   = CGAffineTransformTranslate(image_view.transform, translation.x, translation.y)
-
-    image_view.transform = transform
-
-    recognizer.setTranslation(CGPointZero, inView: crop_view)
-  end
-
   def handle_pinch(recognizer)
-    if handle_state? recognizer.state
+    if handle_gesture_state? recognizer.state
       if recognizer.state == UIGestureRecognizerStateBegan
         @scale_center = @touch_center
       end
@@ -283,20 +329,35 @@ class Motion; class ImageEditorController < UIViewController
   end
 
   def handle_rotation(recognizer)
-    delta_x = touch_center.x - image_view.bounds.size.width / 2
-    delta_y = touch_center.y - image_view.bounds.size.height / 2
+    if handle_gesture_state? recognizer.state
+      delta_x = touch_center.x - image_view.bounds.size.width / 2
+      delta_y = touch_center.y - image_view.bounds.size.height / 2
 
-    transform = CGAffineTransformTranslate(image_view.transform, delta_x, delta_y)
-    transform = CGAffineTransformRotate(transform, recognizer.rotation)
-    transform = CGAffineTransformTranslate(transform, -delta_x, -delta_y)
+      transform = CGAffineTransformTranslate(image_view.transform, delta_x, delta_y)
+      transform = CGAffineTransformRotate(transform, recognizer.rotation)
+      transform = CGAffineTransformTranslate(transform, -delta_x, -delta_y)
 
-    image_view.transform = transform
+      image_view.transform = transform
 
-    recognizer.rotation = 0
+      recognizer.rotation = 0
+    end
   end
 
   def handle_tap(recognizer)
     reset(animated: true)
+  end
+
+  def bounded_scale(scale)
+    return scale if (MINIMUM_SCALE..MAXIMUM_SCALE).include? scale
+
+    scale < MINIMUM_SCALE ? MINIMUM_SCALE : MAXIMUM_SCALE
+  end
+
+  def scale_reset_orientations
+    [ UIImageOrientationUpMirrored,
+      UIImageOrientationDownMirrored,
+      UIImageOrientationLeftMirrored,
+      UIImageOrientationRightMirrored ]
   end
 
   def pan_recognizer
@@ -326,19 +387,6 @@ class Motion; class ImageEditorController < UIViewController
     end
   end
 
-  def source_image=(image)
-    if image != source_image
-      @source_image  = image
-      @preview_image = nil
-    end
-  end
-
-  def bounded_scale(scale)
-    return scale if (MINIMUM_SCALE..MAXIMUM_SCALE).include? scale
-
-    scale < MINIMUM_SCALE ? MINIMUM_SCALE : MAXIMUM_SCALE
-  end
-
   def preview_image
     @preview_image ||= source_image.resizedImageToFitInSize(view.bounds.size, scaleIfSmaller: false)
   end
@@ -353,6 +401,18 @@ class Motion; class ImageEditorController < UIViewController
     @crop_view ||= Motion::ImageEditorView.alloc.init.tap do |view|
       view.translatesAutoresizingMaskIntoConstraints = false
     end
+  end
+
+  def scale
+    @scale ||= 1
+  end
+
+  def touch_center
+    @touch_center ||= CGPointZero
+  end
+
+  def scale_center
+    @scale_center ||= CGPointZero
   end
 
   def prefersStatusBarHidden
