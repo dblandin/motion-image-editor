@@ -32,6 +32,12 @@ class Motion; class ImageEditorView < UIView
   def crop_rect=(rect)
     @crop_rect = CGRectOffset(rect, frame.origin.x, frame.origin.y)
 
+    setNeedsDisplay
+  end
+
+  def drawRect(rect)
+    super
+
     UIGraphicsBeginImageContextWithOptions(bounds.size, false, 0.0)
 
     context = UIGraphicsGetCurrentContext()
@@ -40,7 +46,7 @@ class Motion; class ImageEditorView < UIView
     UIRectFill(bounds)
 
     UIColor.clearColor.setFill
-    UIRectFill(CGRectInset(rect, 1, 1))
+    UIRectFill(CGRectInset(crop_rect, 1, 1))
 
     image_view.image = UIGraphicsGetImageFromCurrentImageContext()
 
