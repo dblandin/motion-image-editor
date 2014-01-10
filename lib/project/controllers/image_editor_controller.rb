@@ -143,7 +143,7 @@ class Motion; class ImageEditorController < UIViewController
     when UIImageOrientationDown || UIImageOrientationDownMirrored
       orientation_transform = CGAffineTransformMakeRotation(Math::PI)
     when UIImageOrientationLeft || UIImageOrientationLeftMirrored
-      orientation_transform = CGAffineTransformMakeRotation(MATH::PI / 2.0)
+      orientation_transform = CGAffineTransformMakeRotation(Math::PI / 2.0)
       transpose             = true
     when UIImageOrientationRight || UIImageOrientationRightMirrored
       orientation_transform = CGAffineTransformMakeRotation(-(Math::PI / 2.0))
